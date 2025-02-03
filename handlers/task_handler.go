@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
+	"strconv"
 	"task-manager/database"
 	"task-manager/models"
 
@@ -13,12 +15,12 @@ import (
 func CreateTask(c *gin.Context) {
 	var task models.Task
 	if err := c.ShouldBindJSON(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	query := "INSERT INTO tasks (title, description, due_date, status) VALUES (?, ?, ?, ?)"
-	result, err := database.DB.Exec(query, task.Title, task.Description, task.DueDate, "pending")
+	result, err := database.DB.Exec(query, task.Title, task.Description, task.DueDate, task.Status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
@@ -37,10 +39,10 @@ func GetTask(c *gin.Context) {
 	query := "SELECT id, title, description, due_date, status FROM tasks WHERE id = ?"
 	err := database.DB.QueryRow(query, id).Scan(&task.ID, &task.Title, &task.Description, &task.DueDate, &task.Status)
 	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		c.JSON(http.StatusNotFound, err.Error())
 		return
 	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -56,15 +58,17 @@ func UpdateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	fmt.Println(task)
 
 	query := "UPDATE tasks SET title = ?, description = ?, due_date = ?, status = ? WHERE id = ?"
 	_, err := database.DB.Exec(query, task.Title, task.Description, task.DueDate, task.Status, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
+	converted_id, _ := strconv.Atoi(id)
 
-	task.ID = int(id[0])
+	task.ID = converted_id
 	c.JSON(http.StatusOK, task)
 }
 
@@ -75,17 +79,17 @@ func DeleteTask(c *gin.Context) {
 	query := "DELETE FROM tasks WHERE id = ?"
 	result, err := database.DB.Exec(query, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
+	changedRows, _ := result.RowsAffected()
+	if changedRows == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Task deleted"})
 }
 
 // List All Tasks
@@ -93,7 +97,7 @@ func ListTasks(c *gin.Context) {
 	query := "SELECT id, title, description, due_date, status FROM tasks"
 	rows, err := database.DB.Query(query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch"})
 		return
 	}
 	defer rows.Close()
@@ -102,7 +106,7 @@ func ListTasks(c *gin.Context) {
 	for rows.Next() {
 		var task models.Task
 		if err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.DueDate, &task.Status); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading tasks"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Tasks Not fetched Successfully"})
 			return
 		}
 		tasks = append(tasks, task)
