@@ -120,4 +120,30 @@ func ListTasks(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, tasks)
+
+}
+
+func PendingTasks(c *gin.Context) {
+	query := "SELECT id, title, description, due_date, status FROM tasks where status  = 'pending' OR status = 'Pending' OR status = 'PENDING' order by due_date"
+	data, err := database.DB.Query(query)
+	// fmt.Println(data)
+	// fmt.Println(err.Error())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch"})
+		return
+	}
+	defer data.Close()
+
+	var tasks []models.Task
+	for data.Next() {
+		var task models.Task
+		if err := data.Scan(&task.ID, &task.Title, &task.Description, &task.DueDate, &task.Status); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Tasks Not fetched Successfully"})
+			return
+		}
+		tasks = append(tasks, task)
+	}
+
+	c.JSON(http.StatusOK, tasks)
+
 }

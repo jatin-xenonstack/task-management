@@ -9,13 +9,14 @@ import (
 
 func main() {
 	database.InitDB()
-	r := gin.Default()
+	router := gin.Default()
 
-	r.POST("/tasks", handlers.CreateTask)
-	r.GET("/tasks/:id", handlers.GetTask)
-	r.PUT("/tasks/:id", handlers.UpdateTask)
-	r.DELETE("/tasks/:id", handlers.DeleteTask)
-	r.GET("/tasks", handlers.ListTasks)
+	router.POST("/tasks", handlers.CreateTask)
+	router.GET("/tasks/:id", handlers.GetTask)
+	router.PUT("/tasks/:id", handlers.UpdateTask)
+	router.DELETE("/tasks/:id", handlers.DeleteTask)
+	router.GET("/tasks", handlers.ListTasks)
+	router.GET("/tasks/pending", handlers.PendingTasks)
 
-	r.Run(":8030") // Start server on port 8080
+	router.Run(":8030") // Start server on port 8080
 }
