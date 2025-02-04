@@ -18,15 +18,17 @@ func CreateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
-
+	// Insert Query to insert data in data base
 	query := "INSERT INTO tasks (title, description, due_date, status) VALUES (?, ?, ?, ?)"
 	result, err := database.DB.Exec(query, task.Title, task.Description, task.DueDate, task.Status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
 	}
-
+	// take out last entry in the table
 	id, _ := result.LastInsertId()
+
+	// set id = id+1 in database
 	task.ID = int(id)
 	c.JSON(http.StatusCreated, task)
 }
@@ -35,9 +37,10 @@ func CreateTask(c *gin.Context) {
 func GetTask(c *gin.Context) {
 	id := c.Param("id")
 	var task models.Task
-
+	// Sql Query for taking data from database for a particular id
 	query := "SELECT id, title, description, due_date, status FROM tasks WHERE id = ?"
 	err := database.DB.QueryRow(query, id).Scan(&task.ID, &task.Title, &task.Description, &task.DueDate, &task.Status)
+
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, err.Error())
 		return
@@ -45,7 +48,7 @@ func GetTask(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
-
+	//send JSON response to client
 	c.JSON(http.StatusOK, task)
 }
 
@@ -60,12 +63,16 @@ func UpdateTask(c *gin.Context) {
 	}
 	fmt.Println(task)
 
+	// Sql query for updating data detail in database
+
 	query := "UPDATE tasks SET title = ?, description = ?, due_date = ?, status = ? WHERE id = ?"
+
 	_, err := database.DB.Exec(query, task.Title, task.Description, task.DueDate, task.Status, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	converted_id, _ := strconv.Atoi(id)
 
 	task.ID = converted_id
@@ -95,17 +102,17 @@ func DeleteTask(c *gin.Context) {
 // List All Tasks
 func ListTasks(c *gin.Context) {
 	query := "SELECT id, title, description, due_date, status FROM tasks"
-	rows, err := database.DB.Query(query)
+	data, err := database.DB.Query(query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch"})
 		return
 	}
-	defer rows.Close()
+	defer data.Close()
 
 	var tasks []models.Task
-	for rows.Next() {
+	for data.Next() {
 		var task models.Task
-		if err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.DueDate, &task.Status); err != nil {
+		if err := data.Scan(&task.ID, &task.Title, &task.Description, &task.DueDate, &task.Status); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Tasks Not fetched Successfully"})
 			return
 		}
